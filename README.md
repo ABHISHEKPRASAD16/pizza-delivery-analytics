@@ -155,9 +155,10 @@ trains on them. Running ML first leaves its outputs describing stale data.
 - [x] Power BI connected, model cleaned, date table marked
 - [x] Streamlit analytics dashboard (7 tabs)
 - [x] Form wired into reporting via mart.daily_actuals
-- [ ] Power BI: 2 pages for sharing (optional)
 - [x] ML layer: forecast, RFM, churn, delivery, anomaly, basket (7 mart tables)
-- [ ] Deploy form to Streamlit Cloud
+- [x] Both apps deployed to Streamlit Community Cloud
+- [x] Nightly GitHub Actions refresh (marts + models)
+- [ ] Power BI: 2 pages for sharing (optional)
 
 ## Known limitations
 
