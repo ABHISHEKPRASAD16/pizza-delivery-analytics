@@ -39,9 +39,32 @@ st.caption("Pizza Delivery Analytics")
 
 if store.backend == "postgres":
     st.success("Connected to Supabase", icon="✅")
+elif not store.durable:
+    # Hosted, but no database. Anything typed here would be written to a disk
+    # that is wiped on the next restart - the form would claim success every
+    # night and lose the lot. Refuse rather than pretend.
+    st.error("**Not connected to the database — the form is disabled.**")
+    st.markdown(
+        "Entries typed here could not be saved anywhere permanent, so the "
+        "form is switched off rather than silently losing your numbers.")
+    if store.reason:
+        st.code(store.reason, language=None)
+    st.markdown(
+        "**Fix:** app menu (top right) → **Settings → Secrets**, add the five "
+        "keys below, save. The app restarts on its own.")
+    st.code(
+        '\n'.join([
+            'PGHOST = "aws-0-<region>.pooler.supabase.com"',
+            'PGPORT = "5432"',
+            'PGDATABASE = "postgres"',
+            'PGUSER = "postgres.<your-project-ref>"',
+            'PGPASSWORD = "<your-database-password>"',
+        ]),
+        language="toml")
+    st.stop()
 else:
-    st.warning("Local test mode - no database connected yet. "
-               "Entries are saved to a local file.", icon="⚠️")
+    st.warning("Local test mode - no database connected. Entries are saved to "
+               "a local file on this machine only.", icon="⚠️")
 
 history = store.load()
 

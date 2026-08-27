@@ -27,12 +27,26 @@ FIELDS = [
 ]
 
 
+def _is_ephemeral_host() -> bool:
+    """True when running somewhere whose filesystem is wiped on restart.
+
+    Streamlit Community Cloud mounts the repo at /mount/src and resets the
+    container regularly. Writing entries there looks like it works and then
+    loses them, which is worse than refusing outright.
+    """
+    import os
+    return (Path("/mount/src").exists()
+            or bool(os.environ.get("STREAMLIT_RUNTIME_ENV"))
+            or not SEED_FILE.exists())
+
+
 class DailyEntryStore:
     """One interface, two backends."""
 
     def __init__(self) -> None:
         self.backend = "local"
         self.reason = ""
+        self.durable = True      # False = saves will NOT survive a restart
         self._engine = None
         try:
             from db import engine
@@ -44,7 +58,13 @@ class DailyEntryStore:
             self.backend = "postgres"
         except Exception as exc:                      # noqa: BLE001
             self.reason = f"{type(exc).__name__}: {exc}"
-            self._ensure_local()
+            # Falling back to a local file is fine on a laptop and DANGEROUS on
+            # a hosted app: the disk is wiped on every restart, so the form
+            # would say "saved" each night and quietly lose the lot. Detect
+            # that case and refuse to pretend.
+            self.durable = not _is_ephemeral_host()
+            if self.durable:
+                self._ensure_local()
 
     # ------------------------------------------------------------ local
     def _ensure_local(self) -> None:
