@@ -91,3 +91,49 @@ The deployed apps read the updated tables on their next load - no redeploy.
   at one branch's usage.
 - Supabase free projects pause after a week of no activity. Opening the
   dashboard counts as activity.
+
+---
+
+# Nightly refresh (GitHub Actions)
+
+`.github/workflows/nightly.yml` rebuilds the marts and retrains the models
+every night at 01:00 UTC, against Supabase, on GitHub's runners. Free, and it
+does not need your PC to be on.
+
+Without it, anything typed into the entry form sits in `staging.daily_entry`
+and never reaches the dashboard.
+
+## One-time setup
+
+**Repo → Settings → Secrets and variables → Actions → New repository secret.**
+
+Add five, one at a time (same values as your `.env`):
+
+| Name | Value |
+|---|---|
+| `PGHOST` | `aws-0-eu-central-1.pooler.supabase.com` |
+| `PGPORT` | `5432` |
+| `PGDATABASE` | `postgres` |
+| `PGUSER` | `postgres.<your-project-ref>` |
+| `PGPASSWORD` | your database password |
+
+These are separate from the Streamlit Cloud secrets. Same values, three places
+(local `.env`, each Streamlit app, GitHub Actions) - that is just how it is.
+
+## Test it before trusting it
+
+**Actions** tab → **Nightly refresh** → **Run workflow**.
+
+The run summary reports the mart table count, the latest trading day and the
+forecast window. If a secret is missing the first step fails immediately with
+a clear message rather than failing obscurely later.
+
+## What it does not do
+
+- It does not extend `dim_date`. New weather and holiday rows come from
+  `fetch_external.py`, which is still manual. The date dimension currently
+  covers the generated history; extend it when you extend the data.
+- It does not touch the Streamlit apps. They read the database live, so they
+  pick up the new tables on their next load with no redeploy.
+
+GitHub emails you if a scheduled run fails.
