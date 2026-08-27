@@ -1,0 +1,16 @@
+# Local-only: generating data and training models.
+# Not installed on Streamlit Cloud - prophet compiles Stan, which makes the
+# deploy slow and brittle for libraries the app never imports.
+-r requirements.txt
+
+requests==2.31.0
+holidays==0.103
+duckdb==1.5.5
+openpyxl==3.1.5
+
+scikit-learn==1.8.0
+statsmodels==0.14.6
+mlxtend==0.25.0
+lightgbm==4.7.0
+prophet==1.4.0
+shap==0.52.0

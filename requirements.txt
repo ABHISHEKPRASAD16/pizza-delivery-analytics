@@ -1,0 +1,13 @@
+# What the two Streamlit apps need at runtime.
+# This is the file Streamlit Community Cloud installs - keep it minimal.
+# The modelling libraries live in requirements-ml.txt and are NOT needed to
+# run the dashboard: it reads the model OUTPUT from mart.* tables.
+
+streamlit==1.62.0
+pandas==3.0.5
+numpy==2.5.2
+SQLAlchemy==2.0.52
+psycopg2-binary==2.9.9
+python-dotenv==1.0.1
+pyarrow==25.0.1
+altair==6.2.2
