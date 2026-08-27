@@ -43,11 +43,35 @@ def eur(x: float, dp: int = 0) -> str:
 
 st.title("🍕 Pizza Delivery Analytics")
 st.caption(f"Analytics · data from {backend()}")
+if backend() == "local":
+    st.warning("Running on local files, not the database.", icon="💾")
 
 try:
     kpi = get("mart.kpi_daily")
 except Exception as exc:                                      # noqa: BLE001
-    st.error(f"Could not load data: {exc}")
+    from ml_common import CONNECT_ERROR
+    st.error("**Not connected to the database.**")
+    st.markdown(
+        "This app reads everything from Supabase. It has no bundled data, so "
+        "without credentials there is nothing to show.")
+    if CONNECT_ERROR:
+        st.code(CONNECT_ERROR, language=None)
+    st.markdown(
+        "**On Streamlit Cloud** — app menu (top right) → "
+        "**Settings → Secrets**, then paste the five keys below and save. "
+        "The app reboots on its own. The same values are in your local `.env`."
+    )
+    st.code(
+        'PGHOST = "aws-0-<region>.pooler.supabase.com"\n'
+        'PGPORT = "5432"\n'
+        'PGDATABASE = "postgres"\n'
+        'PGUSER = "postgres.<your-project-ref>"\n'
+        'PGPASSWORD = "<your-database-password>"',
+        language="toml")
+    st.markdown(
+        "**On your own machine** — copy `.env.example` to `.env` and fill it "
+        "in, or run `generate_data.py` then `build_marts.py --local` to work "
+        "entirely offline.")
     st.stop()
 
 kpi["full_date"] = pd.to_datetime(kpi["full_date"])

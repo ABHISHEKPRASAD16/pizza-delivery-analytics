@@ -19,21 +19,31 @@ PROC = ROOT / "data" / "processed"
 MART_DIR = PROC / "mart"
 
 
-def _engine():
-    """SQLAlchemy engine, or None when no database is configured."""
+def _engine() -> tuple[object | None, str]:
+    """(engine, reason_it_failed). Never raises.
+
+    The reason is KEPT rather than swallowed. Silently falling back to local
+    files turns a connection problem into "parquet not found", which points
+    at the wrong thing entirely - especially on Streamlit Cloud, where there
+    are no local files and the real cause is always missing secrets.
+    """
     try:
         from sqlalchemy import text
         from db import engine
         eng = engine()
         with eng.connect() as conn:
             conn.execute(text("SELECT 1"))
-        return eng
-    except Exception:                                        # noqa: BLE001
-        return None
+        return eng, ""
+    except Exception as exc:                                 # noqa: BLE001
+        return None, f"{type(exc).__name__}: {exc}"
 
 
-ENGINE = _engine()
+ENGINE, CONNECT_ERROR = _engine()
 BACKEND = "postgres" if ENGINE is not None else "local"
+
+# True when there is no database AND no local data - i.e. a deployed app whose
+# secrets are missing. Worth distinguishing from "running locally on files".
+HAS_LOCAL_DATA = (MART_DIR / "kpi_daily.parquet").exists()
 
 
 def load(table: str) -> pd.DataFrame:
@@ -43,11 +53,16 @@ def load(table: str) -> pd.DataFrame:
         with ENGINE.connect() as conn:
             return pd.read_sql(f"SELECT * FROM {schema}.{name}", conn)
 
-    # local fallback: mart tables live in data/processed/mart, core in processed
     path = (MART_DIR if schema == "mart" else PROC) / f"{name}.parquet"
     if not path.exists():
-        raise FileNotFoundError(
-            f"{path} not found. Run generate_data.py and build_marts.py --local first.")
+        raise ConnectionError(
+            "Not connected to the database, and no local data to fall back on.\n\n"
+            f"Connection failed with:\n    {CONNECT_ERROR or 'no credentials found'}\n\n"
+            "If this is Streamlit Cloud: open the app menu (top right) -> "
+            "Settings -> Secrets and add PGHOST, PGPORT, PGDATABASE, PGUSER "
+            "and PGPASSWORD. See .streamlit/secrets.toml.example.\n\n"
+            "If this is your own machine: create .env from .env.example, or "
+            "run generate_data.py and build_marts.py --local to work offline.")
     return pd.read_parquet(path)
 
 
