@@ -13,4 +13,8 @@ data/processed/*
 !data/**/.gitkeep
 
 # power bi
+# The report file itself IS committed - it is the deliverable, and it carries
+# no credentials (Power BI keeps those in the local credential store, not in
+# the .pbix). Scanned before committing: no host, project ref or password.
 *.pbix
+!dashboard/Pizza_Analytics.pbix
