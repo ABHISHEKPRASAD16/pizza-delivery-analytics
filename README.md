@@ -1,174 +1,164 @@
 # Pizza Delivery Analytics
 
 End-to-end analytics for a single-branch pizza delivery business in Potsdam,
-Germany. Built as a portfolio project: nightly data capture on a phone, a
-dimensionally modelled warehouse on Postgres, five ML models, and a Streamlit
-dashboard - with Power BI as an optional reporting layer on top.
+Germany — from a 90-second nightly form on a phone through to a live dashboard
+and a Power BI report, refreshing itself every night with no one at a keyboard.
 
-**The data is synthetic.** Order history is generated, but driven by *real*
-Potsdam weather (Open-Meteo) and *real* Brandenburg public holidays, so the
-relationships the models find are grounded in genuine exogenous variation
-rather than noise. No real business, customer or financial data is used
-anywhere in this repository.
+> **The data is synthetic.** Order history is generated, but driven by *real*
+> Potsdam weather (Open-Meteo) and *real* Brandenburg public holidays, so the
+> relationships the models find are grounded in genuine exogenous variation
+> rather than noise. No real business, customer or financial data appears
+> anywhere in this repository.
 
-Interface language is English. German appears only where it maps to something
-physical - a till-receipt line, or a label a German-speaking colleague reads.
+---
 
-## Architecture
+## The problem
+
+A single delivery branch has no analytics. The till prints a daily total, the
+aggregator sends a monthly statement, and nobody can answer the questions that
+actually matter:
+
+- Which delivery zones are worth serving?
+- What does the aggregator really cost us per order?
+- How many staff for next Friday?
+- Are we making money, or just busy?
+
+Anything built to answer these has to survive contact with a working kitchen:
+whoever closes up at 23:30 is not going to open a laptop.
+
+## What was built
 
 ```
-  app.py  - entry form (phone)     ~85 seconds/day
-              |
-              v
-  Supabase   staging.daily_entry          as typed
-              |
-              |  build_marts.py
-              v
-  Supabase   core.*  ->  mart.*           star schema -> reporting layer
-              |                            (incl. mart.daily_actuals, which
-              |                             merges form entries with history)
-              +--------------------+
-              |                    |
-              v                    v
-  dashboard.py              Power BI
-  (all the analysis)        (2 pages, for sharing)
+  Entry form (phone)          ~90 seconds at close
+        |
+        v
+  Supabase Postgres           staging -> star schema -> reporting marts
+        |
+        |  GitHub Actions, nightly 01:00
+        |  rebuild marts + retrain models
+        v
+  +-------------------+-------------------+
+  |                   |                   |
+  Streamlit dashboard        Power BI report
+  (live, 7 tabs)             (2 pages, composite model)
 ```
 
-Two Streamlit apps, one command each:
-
-| App | Who / when | What |
-|---|---|---|
-| `app.py` | shift lead, nightly, phone | 12 fields off the till receipt |
-| `dashboard.py` | you, desktop | 7 tabs: overview, profit, zones, forecast, customers, menu, daily log |
-
-Power BI is optional on top - useful for handing a report to the franchise
-owner, not needed to see the numbers.
-
-## Data
-
-Synthetic order history driven by **real** external data:
-
-- **Weather** - Open-Meteo ERA5 archive for the store coordinates
-- **Public holidays** - `holidays` package, Germany `subdiv="BB"`
-- **School holidays** - hardcoded Brandenburg dates, approximate; see
-  `reference_data.SCHOOL_HOLIDAYS_BB`
-
-Range 2025-09-01 to 2026-08-20: 40,633 orders, 155,175 order lines,
-2,200 pseudonymous customers, 354 days.
-
-> The order data is synthetic. Relationships the models find are real
-> relationships *in this data*, grounded in real weather and holidays, but
-> they are not evidence about the real branch.
-
-## Cost model
-
-The P&L assumptions live in `src/reference_data.py`, deliberately visible
-rather than buried in code, and are also loaded into
-`mart.dim_cost_assumption` so the dashboard can show what profit rests on.
-
-| Line | Share of net revenue |
+| Piece | What it does |
 |---|---|
-| Food cost | 29.7 % |
-| Packaging | 3.6 % |
-| Waste | 0.7 % |
-| Labour (incl. employer contributions) | 33.6 % |
-| Payment fees | 1.1 % |
-| Fixed costs (rent, energy, vehicles, ...) | 10.5 % |
-| Franchise licence + ad levy | 7.0 % |
-| **Operating profit** | **13.7 %** |
+| `src/app.py` | Nightly entry form. 12 fields off the till receipt, phone-first. Refuses to run if it cannot save durably. |
+| `src/dashboard.py` | Analytics dashboard — overview, profit, zones, forecast, customers, menu, daily log. |
+| `sql/` | `staging` → `core` star schema (11 tables) → `mart` reporting layer. |
+| `src/ml_*.py` | Five models: demand forecast, RFM, churn, delivery time, anomaly detection, market basket. |
+| `.github/workflows/` | Nightly refresh. Rebuilds marts, retrains models, no local machine involved. |
+| `dashboard/*.pbix` | Power BI report — Overview and Cost Stack. |
 
-> These are estimates for a branch of this size, **not** figures from the real
-> Waldstadt books. Replace them with actuals before any of this informs a real
-> decision.
+## What it found
 
-## Layout
+Real findings from the modelled data, each pointing at a decision:
 
-```
-data/raw/          external pulls (weather, calendar)
-data/processed/    generated tables + data/processed/mart/
-sql/               01_schema.sql (core), 02_marts.sql (Power BI layer)
-src/               pipeline and app
-docs/              setup guides and data dictionary
-```
+**The aggregator costs €3.79 per order.** Margin per order is €19.77 on the
+branch's own website against €15.98 via the aggregator. Across the year that
+gap is roughly €29,000 — an argument for pushing customers to the app.
+
+**One delivery zone is structurally undeliverable.** Golm is 9.5 km out and
+promised in 45 minutes; it misses that on 63% of orders. Distance drives 60% of
+delivery time, so no amount of pushing staff fixes it. The model recommends a
+55-minute promise there — and 35 minutes in the home zone, where the branch
+currently under-promises by ten minutes.
+
+**Labour is the only large cost that can be moved.** Of 86% of net revenue
+consumed by costs, food, rent and franchise fees are contractual or
+market-driven. Labour at 33% is the one an owner controls week to week.
+
+**Demand is forecastable to 11% error.** Prophet with real weather forecasts
+beats a same-day-last-week baseline by 32%, using the actual Open-Meteo outlook
+for the coming fortnight.
+
+## Stack
+
+**Data** Supabase (Postgres 17) · star schema · dbt-style mart layer in plain SQL
+**Pipeline** Python · pandas · SQLAlchemy · DuckDB for local runs
+**ML** Prophet · scikit-learn · LightGBM · SHAP · mlxtend · statsmodels
+**Apps** Streamlit (two apps, deployed on Community Cloud)
+**BI** Power BI Desktop, composite model (Import + DirectQuery)
+**Ops** GitHub Actions nightly refresh
 
 ## Running it
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-ml.txt
 ```
+
+Copy `.env.example` to `.env` and fill in your Postgres credentials, then:
 
 ```bash
-python src/fetch_external.py          # real weather + holidays -> dim_date
+python src/fetch_external.py    # real weather + holidays -> date dimension
 ```
+```bash
+python src/generate_data.py     # build the synthetic warehouse
+```
+```bash
+python src/validate_data.py     # quality gate
+```
+```bash
+python src/load_to_postgres.py  # deploy schema, bulk COPY
+```
+```bash
+python src/build_marts.py       # reporting layer
+```
+```bash
+python src/run_ml.py            # five models -> seven mart tables
+```
+
+Then either app:
 
 ```bash
-python src/generate_data.py           # build the synthetic warehouse
+streamlit run src/dashboard.py
 ```
-
 ```bash
-python src/validate_data.py           # quality gate - run after any change
+streamlit run src/app.py
 ```
 
-```bash
-python src/build_marts.py --local     # marts via DuckDB, no database needed
-```
+To work entirely offline, skip the Postgres steps and use
+`python src/build_marts.py --local` — everything falls back to Parquet.
 
-```bash
-streamlit run src/app.py              # nightly entry form
-```
+## Documentation
 
-```bash
-streamlit run src/dashboard.py        # the analytics dashboard
-```
+| | |
+|---|---|
+| `docs/supabase_setup.md` | Creating the database and connecting to it |
+| `docs/deploy_streamlit.md` | Deploying both apps, and the nightly workflow |
+| `docs/powerbi_setup.md` | Connecting Power BI, the model, refresh |
+| `docs/data_dictionary.md` | Every table and column |
 
-Once `.env` is configured (see `docs/supabase_setup.md`):
+## Design decisions worth knowing
 
-```bash
-python src/check_load_types.py        # pre-flight: dtypes vs schema
-```
+**The mart layer is the contract.** Power BI and Streamlit read `mart.*` and
+nothing else, so the model underneath can be reshaped without breaking a
+report.
 
-```bash
-python src/load_to_postgres.py        # deploy schema + bulk COPY
-```
+**Costs are data, not code.** Every P&L assumption lives in
+`src/reference_data.py` and is loaded into `mart.dim_cost_assumption`, so the
+report can show what a profit figure rests on instead of asserting it.
 
-```bash
-python src/build_marts.py             # marts in Postgres
-```
+**The form fails loudly.** On a host with no durable storage it refuses to
+render rather than accepting entries it would silently lose — the worst failure
+mode for a data-capture app.
 
-```bash
-python src/run_ml.py                  # all 5 models -> 7 more mart tables
-```
-
-Run order matters: `build_marts.py` rebuilds the base marts, then `run_ml.py`
-trains on them. Running ML first leaves its outputs describing stale data.
-
-## Status
-
-- [x] Star schema, 11 core tables
-- [x] Real weather + Brandenburg holidays
-- [x] Synthetic order generator, validated
-- [x] Daily close form with missing-day detection and empty-save guard
-- [x] Mart layer, 13 tables, runs on Postgres and DuckDB
-- [x] Full cost model through to operating profit
-- [x] Power BI guide: connection, relationships, DAX, pages, gateway
-- [x] Supabase project + load (199,156 rows, eu-central-1)
-- [x] Power BI connected, model cleaned, date table marked
-- [x] Streamlit analytics dashboard (7 tabs)
-- [x] Form wired into reporting via mart.daily_actuals
-- [x] ML layer: forecast, RFM, churn, delivery, anomaly, basket (7 mart tables)
-- [x] Both apps deployed to Streamlit Community Cloud
-- [x] Nightly GitHub Actions refresh (marts + models)
-- [ ] Power BI: 2 pages for sharing (optional)
+**Models are trained locally, served from the database.** The Streamlit apps
+never import Prophet or LightGBM; they read model *output* from mart tables.
+Deploys stay small and fast.
 
 ## Known limitations
 
 - **One year of history.** Rain and heat effects are statistically
-  identifiable; cold, public-holiday and school-holiday effects are not
-  (354 days contains only 12 public holidays). Extending the range in
-  `fetch_external.py` fixes this. `validate_data.py` reports it every run.
-- **Brandenburg school holiday dates are approximate.** Replace with official
-  MBJS dates before client use.
+  identifiable; cold, public-holiday and school-holiday effects are not — 354
+  days contains only 12 public holidays. `validate_data.py` reports this on
+  every run. Extending the range in `fetch_external.py` resolves it.
+- **Brandenburg school-holiday dates are approximations**, not official MBJS
+  dates.
+- **The cost model is estimated**, not taken from any real set of books.
+  Replace the figures in `src/reference_data.py` before they inform a decision.
 - **Power BI connects with encryption disabled.** Supabase signs its pooler
-  certificate with a private CA that Windows does not trust. Fine for
-  synthetic data; install the Supabase CA before loading anything real.
-  See `docs/powerbi_setup.md`.
+  certificate with a private CA that Windows does not trust. Acceptable for
+  synthetic data; install the Supabase CA before anything real.
