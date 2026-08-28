@@ -118,59 +118,72 @@ Free built-in ML. It runs a decision tree and writes the finding in English.
 ## Page 2 - Profit
 
 New page (**+** at the bottom), rename to `Profit`. Same canvas colour and the
-same header text box, but second line: `where the money actually goes`.
+same header text box, but the subtitle reads `where the money actually goes`.
 
-### KPI row - four cards
+Page 1 answers "how are we doing". Page 2 answers "where does the money go".
+Nothing is repeated between them - a KPI that appears twice is a wasted slot.
 
-All at `Y 72, W 302, H 104`. X: `20`, `334`, `648`, `962`.
+### KPI row - the cost stack
 
-| Card | Measure | Value colour |
-|---|---|---|
-| 1 | `Net Revenue` | `#22252A` |
-| 2 | `Operating Profit` | `#2E7D5B` |
-| 3 | `Operating Margin %` | `#2E7D5B` |
-| 4 | `Labour Cost %` | `#C0392B` |
+All at `Y 72, W 238, H 104`. X: `20`, `270`, `520`, `770`, `1020`.
 
-Same white background, rounded corners, soft shadow as page 1.
+| Card | Measure | Value | Colour |
+|---|---|---|---|
+| 1 | `Food Cost %` | 29.2 % | `#C0392B` |
+| 2 | `Labour Cost %` | 33.1 % | `#C0392B` |
+| 3 | `Fixed Costs` | EUR 114,055 | `#6B7280` |
+| 4 | `Franchise Fees` | EUR 75,902 | `#6B7280` |
+| 5 | `Commission Paid` | EUR 25,496 | `#6B7280` |
 
-### Cost breakdown - clustered bar
+Red for the two costs that can be acted on this week, grey for the three that
+are contractual. The colour split is the message.
 
-`X 20, Y 192, W 832, H 300`
+### Margin per order by channel - clustered bar
 
-Use a **clustered bar chart** (horizontal), not a waterfall. A waterfall wants
-one measure plus a category; you have eight separate measures, and forcing it
-takes ten times as long for a chart that reads no better.
+`X 20, Y 192, W 610, H 250`
 
-- X-axis (values): drag in, in this order —
-  `Food Cost %`, `Labour Cost %`, `Fixed Costs`, `Franchise Fees`,
-  `Commission Paid`
-- Bars → colour `#C0392B`
+- Y-axis: `mart dim_channel` -> `channel_name`
+- X-axis: `Margin per Order`
+- Bars `#C0392B`, data labels on
+- Title: `Margin per order by channel`
+
+Expect Website 19.77, Telefon 19.59, App 19.42, Abholung 18.16,
+Lieferando 15.98.
+
+The most valuable visual in the report. The aggregator earns EUR 3.79 less per
+order than the branch's own website - about EUR 29,000 across the year - and
+it points straight at a decision: push customers to the app.
+
+### Cost lines - clustered bar
+
+`X 650, Y 192, W 610, H 250`
+
+- X-axis (values): `Fixed Costs`, `Franchise Fees`, `Commission Paid`
 - Title: `Cost lines`
-- Data labels on
 
-### Cost assumptions - table
+Do NOT mix the percentage measures with the euro ones in a single chart - the
+axis has to serve both and ends up meaningless for each. The percentages are
+already the KPI cards above.
 
-`X 864, Y 192, W 396, H 300`
+### Operating profit by month - line
 
-- Columns: `cost_item`, `cost_type`, `monthly_eur`
-- From `mart dim_cost_assumption`
-- Title: `What the profit figure assumes`
-- Style presets → **Minimal**
-- Grid → Row padding 4
+`X 20, Y 458, W 610, H 242`
 
-This table is the point of the page. Anyone can assert a profit number; showing
-the assumptions underneath is what makes it arguable, and therefore credible.
-
-### Profit by month - line chart
-
-`X 20, Y 504, W 1240, H 196`
-
-- X-axis: `mart dim_date` → `month_name`
+- X-axis: `mart dim_date` -> `month_name`
 - Y-axis: `Operating Profit`
-- Line colour `#2E7D5B`, width 3
-- Title: `Operating profit by month`
-- ✅ Must read January → December. If not: `month_name` → **Sort by column →
-  month_sort**
+- Line `#2E7D5B`, width 3
+- Must read January -> December, else set Sort by column -> `month_sort`
+
+### What the profit assumes - table
+
+`X 650, Y 458, W 610, H 242`
+
+- From `mart dim_cost_assumption`: `cost_item`, `cost_type`, `monthly_eur`
+- Style presets -> Minimal
+
+Nobody has to take the 13.7% margin on trust - they can read the rent, the
+energy bill and the franchise rate, and argue with them. That is the
+difference between a credible report and an asserted number.
 
 ---
 
