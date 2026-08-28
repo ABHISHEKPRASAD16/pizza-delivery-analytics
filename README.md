@@ -1,7 +1,6 @@
 # Pizza Delivery Analytics
 
 [![Live dashboard](https://img.shields.io/badge/Live-Dashboard-FF4B4B?logo=streamlit&logoColor=white)](https://pizza-delivery-analytics.streamlit.app/)
-[![Entry form](https://img.shields.io/badge/Live-Entry%20form-FF4B4B?logo=streamlit&logoColor=white)](https://pizza-daily-entry.streamlit.app/)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Postgres](https://img.shields.io/badge/Supabase-Postgres%2017-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -12,13 +11,14 @@ and a Power BI report, refreshing itself every night with no one at a keyboard.
 
 ## Try it
 
-| | |
-|---|---|
-| **[Dashboard →](https://pizza-delivery-analytics.streamlit.app/)** | Seven tabs: overview, profit, delivery zones, forecast, customers, menu, daily log. Reads live from Postgres. |
-| **[Entry form →](https://pizza-daily-entry.streamlit.app/)** | What a shift lead fills in at close. Twelve fields, phone-first, about 90 seconds. |
+**[Open the dashboard →](https://pizza-delivery-analytics.streamlit.app/)**
 
-Both are on Streamlit's free tier, so the first load after a quiet spell takes
-a few seconds to wake.
+Seven tabs — overview, profit, delivery zones, forecast, customers, menu, and
+the daily log. Reads live from Postgres. It is on Streamlit's free tier, so the
+first load after a quiet spell takes a few seconds to wake.
+
+The nightly entry form is deployed alongside it but not linked publicly — it
+writes to the database, so it stays behind a private URL.
 
 > **The data is synthetic.** Order history is generated, but driven by *real*
 > Potsdam weather (Open-Meteo) and *real* Brandenburg public holidays, so the
