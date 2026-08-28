@@ -21,6 +21,25 @@ Both run on Streamlit's free tier, so the first load after a quiet spell takes
 a few seconds to wake. The form is live and writes to the database — the data
 behind it is synthetic, so feel free to try it.
 
+## What it looks like
+
+**Streamlit dashboard** — reads live from Postgres, seven tabs
+
+![Streamlit dashboard](docs/images/streamlit-dashboard.png)
+
+**Power BI — Overview.** Revenue against its 7-day average with anomaly
+detection, orders by weekday, Key Influencers, and a live DirectQuery table of
+the last seven days showing whether each figure came from the nightly form or
+the order history.
+
+![Power BI Overview page](docs/images/powerbi-overview.png)
+
+**Power BI — Cost Stack.** Where the money goes. Margin per order by channel is
+the one that matters: the aggregator returns €16 against €20 on the branch's
+own website.
+
+![Power BI Cost Stack page](docs/images/powerbi-cost-stack.png)
+
 > **The data is synthetic.** Order history is generated, but driven by *real*
 > Potsdam weather (Open-Meteo) and *real* Brandenburg public holidays, so the
 > relationships the models find are grounded in genuine exogenous variation
